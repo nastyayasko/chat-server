@@ -35,7 +35,9 @@ io.on('connection', (socket) => {
       })
     } else {
       clients.forEach(client => {
-        client.emit('chat', message); 
+        if (client.status) {
+          client.emit('chat', message); 
+        }
       })
     }
   })
@@ -60,6 +62,11 @@ io.on('connection', (socket) => {
     const connect = rooms[socket.email];
     rooms[socket.email] = null;
     rooms[connect] = null;
+    const person = clients.find(client => client.email === connect);
+    person.status = !person.status;
+    socket.status = !socket.status;
+    person.emit('status', `You are in Global Chat!`);
+    socket.emit('status', `You are in Global Chat!`);
   })
  
   socket.status = true;
