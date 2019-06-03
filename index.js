@@ -12,6 +12,7 @@ let clients = [];
 let messages = [];
 let emails = [];
 let rooms = {};
+let blackList = {};
 
 const io = socket(server);
 
@@ -35,6 +36,8 @@ io.on('connection', (socket) => {
       })
     } else {
       clients.forEach(client => {
+        if (blackList[socket.email] && blackList[socket.email].includes(client.email)){ return };
+        if (blackList[client.email] && blackList[client.email].includes(socket.email)){ return };
         if (client.status) {
           client.emit('chat', message); 
         }
@@ -43,19 +46,56 @@ io.on('connection', (socket) => {
   })
  
   socket.on('connect-user', (user) => {
-    console.log(user);
     if (!socket.status) {
       socket.emit('status', `You are in private chat with '${rooms[socket.email]}' now!`); 
       return;
     }
+    if (blackList[socket.email] && blackList[socket.email].includes(user)){
+      socket.emit('status', `You blocked '${user}'.`); 
+      return;
+    }
+    if (blackList[user] && blackList[user].includes(socket.email)){
+      socket.emit('status', `You can't chat with '${user}'. You are blocked.`); 
+      return;
+    }
     const person = clients.find(client => client.status && client.email === user);
     if (!person){ return socket.emit('status',`'${user}' is busy!`)};
-    person.status = !person.status;
-    socket.status = !socket.status;
+    person.status = false;
+    socket.status = false;
     rooms[socket.email] = user;
     rooms[user] = socket.email;
     person.emit('status',`You are invited to private chat with '${socket.email}'!`);
     socket.emit('status',`You can start chat with '${user}'.`);
+    person.emit('clear');
+    socket.emit('clear');
+  })
+
+  socket.on('block-user', (user) => {
+    if (!blackList[socket.email]) {blackList[socket.email]=[]};
+    blackList[socket.email].push(user);
+    if (rooms[socket.email] === user){
+      const connect = rooms[socket.email];
+      rooms[socket.email] = null;
+      rooms[connect] = null;
+      const person = clients.find(client => client.email === connect);
+      person.status = true; 
+      socket.status = true;
+      person.emit('status', `You are in Global Chat!`);
+      person.emit('clear');
+      socket.emit('status', `You are in Global Chat!`);
+      socket.emit('clear');
+    }
+  })
+
+  socket.on('restore-user', (user) => {
+    const newList = blackList[socket.email].filter(i => i !== user);
+    blackList[socket.email] = newList;
+    socket.emit('black-list', blackList[socket.email]);
+  })
+
+  socket.on('black-list', () => {
+    if (!blackList[socket.email]) return;
+    socket.emit('black-list', blackList[socket.email]);
   })
 
   socket.on('global', () => {
@@ -63,10 +103,14 @@ io.on('connection', (socket) => {
     rooms[socket.email] = null;
     rooms[connect] = null;
     const person = clients.find(client => client.email === connect);
-    person.status = !person.status;
-    socket.status = !socket.status;
-    person.emit('status', `You are in Global Chat!`);
+    if(person) {
+      person.status = true;
+      person.emit('status', `You are in Global Chat!`);
+      person.emit('clear');
+    }
+    socket.status = true;
     socket.emit('status', `You are in Global Chat!`);
+    socket.emit('clear');
   })
  
   socket.status = true;
@@ -84,6 +128,8 @@ io.on('connection', (socket) => {
     const connect = rooms[socket.email];
     rooms[socket.email] = null;
     rooms[connect] = null;
+    const person = clients.find(client => client.email === connect);
+    if (person) {person.status = true};
   // const block = blackList[socket.email];
   // blackList[socket.email] = null;
   // blackList[block] = null;
