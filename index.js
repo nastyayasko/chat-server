@@ -72,7 +72,10 @@ io.on('connection', (socket) => {
 
   socket.on('block-user', (user) => {
     if (!blackList[socket.email]) {blackList[socket.email]=[]};
+    if (blackList[socket.email].includes(user)) return;
     blackList[socket.email].push(user);
+    socket.emit('black-list', blackList[socket.email]);
+    socket.emit('people-online', emails);
     if (rooms[socket.email] === user){
       const connect = rooms[socket.email];
       rooms[socket.email] = null;
@@ -91,11 +94,7 @@ io.on('connection', (socket) => {
     const newList = blackList[socket.email].filter(i => i !== user);
     blackList[socket.email] = newList;
     socket.emit('black-list', blackList[socket.email]);
-  })
-
-  socket.on('black-list', () => {
-    if (!blackList[socket.email]) return;
-    socket.emit('black-list', blackList[socket.email]);
+    socket.emit('people-online', emails);
   })
 
   socket.on('global', () => {
