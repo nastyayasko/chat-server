@@ -67,15 +67,6 @@ io.on('connection', (socket) => {
  
   socket.on('connect-user', (user) => {
     
-    if (blackList[socket.email] && blackList[socket.email].includes(user)){
-      socket.emit('status', `You blocked '${user}'.`); 
-      return;
-    }
-    if (blackList[user] && blackList[user].includes(socket.email)){
-      socket.emit('status', `You can't chat with '${user}'. You are blocked.`); 
-      return;
-    }
-    
     const currentDialog = dialogs.find(dialog => dialog.type === 'individual' && dialog.users.includes(socket.email) && dialog.users.includes(user));
 
     if (currentDialog) {
@@ -98,6 +89,18 @@ io.on('connection', (socket) => {
     person.emit('dialogs', personDialogs);
 
   })
+
+  socket.on('new-group', (group) => {
+    dialogs.push(group);
+    clients.forEach(client => {
+      if (group.users.includes(client.email)){
+        const personDialogs = dialogs.filter(dialog => dialog.users.includes(client.email));
+        console.log(personDialogs);
+        client.emit('dialogs', personDialogs);
+      }
+    })
+  })
+
   socket.on('change-dialog', dialog => {
     const current = dialogs.find(i => i.type === dialog);
     if (current) {
