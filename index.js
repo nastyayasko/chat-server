@@ -10,7 +10,6 @@ app.use(express.static('public'));
 
 let clients = [];
 let emails = [];
-let rooms = {};
 let blackList = {};
 
 const dialogs = [
@@ -40,7 +39,6 @@ io.on('connection', (socket) => {
   })
 
   socket.on('chat', (message) => {
-    console.log(message);
     const {currentDialog} = message;
 
     const current = dialogs.find(dialog => dialog.type === currentDialog);
@@ -55,11 +53,7 @@ io.on('connection', (socket) => {
         }
       })
     } else {
-      
-      console.log(currentDialog);
-      console.log(socket.email);
       const individual = dialogs.find(dialog => dialog.type === 'individual' && dialog.users.includes(currentDialog) && dialog.users.includes(socket.email));
-    
       individual.messages.push(message);
       clients.forEach(client => {
         if (individual.users.includes(client.email)) {
@@ -122,18 +116,6 @@ io.on('connection', (socket) => {
     blackList[socket.email].push(user);
     socket.emit('black-list', blackList[socket.email]);
     socket.emit('people-online', emails);
-    if (rooms[socket.email] === user){
-      const connect = rooms[socket.email];
-      rooms[socket.email] = null;
-      rooms[connect] = null;
-      const person = clients.find(client => client.email === connect);
-      person.status = true; 
-      socket.status = true;
-      person.emit('status', `You are in Global Chat!`);
-      person.emit('clear');
-      socket.emit('status', `You are in Global Chat!`);
-      socket.emit('clear');
-    }
   })
 
   socket.on('restore-user', (user) => {
@@ -142,23 +124,6 @@ io.on('connection', (socket) => {
     socket.emit('black-list', blackList[socket.email]);
     socket.emit('people-online', emails);
   })
-
-  socket.on('global', () => {
-    const connect = rooms[socket.email];
-    rooms[socket.email] = null;
-    rooms[connect] = null;
-    const person = clients.find(client => client.email === connect);
-    if(person) {
-      person.status = true;
-      person.emit('status', `You are in Global Chat!`);
-      person.emit('clear');
-    }
-    socket.status = true;
-    socket.emit('status', `You are in Global Chat!`);
-    socket.emit('clear');
-  })
- 
-  socket.status = true;
 
   clients.push(socket);
 
@@ -171,14 +136,6 @@ io.on('connection', (socket) => {
       client.emit('people-online', emails); 
     })
     dialogs[0].users = emails;
-    const connect = rooms[socket.email];
-    rooms[socket.email] = null;
-    rooms[connect] = null;
-    const person = clients.find(client => client.email === connect);
-    if (person) {person.status = true};
-  // const block = blackList[socket.email];
-  // blackList[socket.email] = null;
-  // blackList[block] = null;
   })
   
 })
