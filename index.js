@@ -1,12 +1,17 @@
 const express = require('express');
 const socket = require('socket.io');
+const bodyParser = require('body-parser');
+const cors = require('cors');
 
 const app = express();
 const server = app.listen(3020, () => {
     console.log('listening on port 3020');
 });
 
+app.use( bodyParser.json() );
+app.use( bodyParser.urlencoded({extended:true}) );
 app.use(express.static('public'));
+app.use( cors() );
 
 let clients = [];
 let emails = [];
@@ -19,6 +24,23 @@ const dialogs = [
     messages: [],
   }
 ]
+
+
+app.post('/api/auth', function(req, res){
+  console.log(req.body);
+
+  res.status(200).send( 'Hello' );
+
+});
+
+
+
+
+
+
+
+
+
 
 const io = socket(server);
 
