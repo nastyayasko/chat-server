@@ -25,16 +25,46 @@ const dialogs = [
   }
 ]
 
+const users = [];
+
 
 app.post('/api/auth', function(req, res){
-  console.log(req.body);
-
-  res.status(200).send( 'Hello' );
+  const data = req.body;
+  let number;
+  const user = users.find((user, i )=> {
+    if(user.email === data.email){
+      number = i;
+      return true;
+    }})
+  if (user) {
+    users.splice(number, 1, data)
+  } else {
+    users.push(data);
+  }
+  res.status(200).send(data);
 
 });
 
+app.post('/api/sign-up', function (req, res){
+  const data = req.body;
+  const user = users.find(user => user.email === data.email);
+  if (user){
+    res.status(200).send( {client: true} );
+    return;
+  }
+  users.push(data);
+  res.status(200).send( data );
+});
 
-
+app.post('/api/log-in', function (req, res){
+  const data = req.body;
+  const user = users.find(user => user.email === data.email && user.password === data.password);
+  if (!user){
+    res.status(200).send( {new: true} );
+    return;
+  }
+  res.status(200).send( user );
+});
 
 
 
@@ -117,7 +147,6 @@ io.on('connection', (socket) => {
     clients.forEach(client => {
       if (group.users.includes(client.email)){
         const personDialogs = dialogs.filter(dialog => dialog.users.includes(client.email));
-        console.log(personDialogs);
         client.emit('dialogs', personDialogs);
       }
     })
@@ -161,6 +190,9 @@ io.on('connection', (socket) => {
       client.emit('people-online', emails); 
     })
     dialogs[0].users = emails;
+  })
+  clients.forEach(i => {
+    console.log(i.id);
   })
   
 })
