@@ -2,16 +2,23 @@ const express = require('express');
 const socket = require('socket.io');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const mongo = require('mongodb').MongoClient;
+
 
 const app = express();
 const server = app.listen(3020, () => {
     console.log('listening on port 3020');
 });
 
-app.use( bodyParser.json() );
-app.use( bodyParser.urlencoded({extended:true}) );
-app.use(express.static('public'));
-app.use( cors() );
+const io = socket(server);
+
+mongo.connect('mongodb://localhost:mongochat', { useNewUrlParser: true }, (err, db) => {
+  if (err) {
+    throw err;
+  }
+  
+  console.log('MongoDB connected ...')
+})
 
 let clients = [];
 let emails = [];
@@ -26,6 +33,11 @@ const dialogs = [
 ]
 
 const users = [];
+
+app.use( bodyParser.json() );
+app.use( bodyParser.urlencoded({extended:true}) );
+app.use(express.static('public'));
+app.use( cors() );
 
 
 app.post('/api/auth', function(req, res){
@@ -66,18 +78,8 @@ app.post('/api/log-in', function (req, res){
   res.status(200).send( user );
 });
 
-
-
-
-
-
-
-const io = socket(server);
-
 io.on('connection', (socket) => {
   socket.emit('connect');
-
-  
 
   socket.on('email', (email) => {
     socket.email = email;
@@ -88,6 +90,7 @@ io.on('connection', (socket) => {
     dialogs[0].users = emails;
     const myDialogs = dialogs.filter(dialog => dialog.users.includes(socket.email));
     socket.emit('dialogs', myDialogs);
+    console.log('отправлено');
   })
 
   socket.on('chat', (message) => {
@@ -190,9 +193,9 @@ io.on('connection', (socket) => {
       client.emit('people-online', emails); 
     })
     dialogs[0].users = emails;
-  })
-  clients.forEach(i => {
-    console.log(i.id);
+    console.log('off');
   })
   
+  console.log('done');
+  console.log(clients.length);
 })
