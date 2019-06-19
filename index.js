@@ -2,8 +2,11 @@ const express = require('express');
 const socket = require('socket.io');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const mongo = require('mongodb').MongoClient;
+const mongoose = require('mongoose');
 
+const Users = require('./mongoose/users');
+const Dialogs = require('./mongoose/dialogs');
+const Messages = require('./mongoose/messages');
 
 const app = express();
 const server = app.listen(3020, () => {
@@ -12,27 +15,13 @@ const server = app.listen(3020, () => {
 
 const io = socket(server);
 
-mongo.connect('mongodb://localhost:mongochat', { useNewUrlParser: true }, (err, db) => {
-  if (err) {
-    throw err;
-  }
-  
-  console.log('MongoDB connected ...')
-})
+mongoose.connect('mongodb://localhost/chat', {useNewUrlParser: true})
 
-let clients = [];
+let clientsOnline = [];
 let emails = [];
-let blackList = {};
 
-const dialogs = [
-  {
-    type: 'global',
-    users: [],
-    messages: [],
-  }
-]
+let currentUser;
 
-const users = [];
 
 app.use( bodyParser.json() );
 app.use( bodyParser.urlencoded({extended:true}) );
@@ -40,162 +29,207 @@ app.use(express.static('public'));
 app.use( cors() );
 
 
+app.get('/api/users', function(req, res){
+  Users.find()
+  .then(users => {
+    res.status(200).send(users);
+  })
+  .catch(err => {
+    res.status(404).send(err);
+  })
+})
+
+app.get('/api/dialogs', function(req, res){
+  Dialogs.find()
+  .then(users => {
+    res.status(200).send(users);
+  })
+  .catch(err => {
+    res.status(404).send(err);
+  })
+})
+
+app.get('/api/messages', function(req, res){
+  Messages.find()
+  .then(messages => {
+    res.status(200).send(messages);
+  })
+  .catch(err => {
+    res.status(404).send(err);
+  })
+})
+
+
+
 app.post('/api/auth', function(req, res){
   const data = req.body;
-  let number;
-  const user = users.find((user, i )=> {
-    if(user.email === data.email){
-      number = i;
-      return true;
-    }})
-  if (user) {
-    users.splice(number, 1, data)
-  } else {
-    users.push(data);
-  }
-  res.status(200).send(data);
-
+  Users.find({email: data.email})
+    .then(result => {
+      if (result.length > 0){
+        Users.updateOne({email: data.email}, data)
+          .then(() => {
+            Users.find({email: data.email})
+            .then(result => {
+              currentUser = result[0];
+              res.status(200).send(result[0]);
+            })
+          })
+          .catch(err => {
+            console.log('update:', err);
+          });
+      } else {
+        const user = new Users ({
+              ... data,
+              _id: new mongoose.Types.ObjectId()
+            });
+        user.save()
+          .then(res => {
+            currentUser = user;
+            res.status(200).send(user);
+          })
+          .catch(err => {console.log('save:', err)});
+      }
+    })
+    .catch(err => {
+      console.log('find:', err);
+    });
 });
 
 app.post('/api/sign-up', function (req, res){
   const data = req.body;
-  const user = users.find(user => user.email === data.email);
-  if (user){
-    res.status(200).send( {client: true} );
-    return;
-  }
-  users.push(data);
-  res.status(200).send( data );
+  Users.find({email: data.email})
+    .then(result => {
+      if (result.length > 0){
+        res.status(200).send({client: true});
+      } else {
+        const user = new Users ({
+          ... data,
+          _id: new mongoose.Types.ObjectId()
+        });
+        user.save()
+          .then(() =>{
+            currentUser = user;
+            res.status(200).send( user );
+          })
+          .catch(err => {console.log(err)});
+      }
+    })
+    .catch(err => {console.log(err)});
 });
 
 app.post('/api/log-in', function (req, res){
   const data = req.body;
-  const user = users.find(user => user.email === data.email && user.password === data.password);
-  if (!user){
-    res.status(200).send( {new: true} );
-    return;
-  }
-  res.status(200).send( user );
+  Users.find({email: data.email, password: data.password})
+    .then(result => {
+      if (result.length > 0) {
+        currentUser = result[0];
+        res.status(200).send( result[0] );
+      } else {
+        res.status(200).send( {new: true} );
+      }
+    })
+    .catch(err => {
+      console.log('login:', err);
+    });
 });
+
+function showDialogs(id, socket){
+  Dialogs.find()
+    .then(result => {
+      const dialogsList = result.filter(dialog => dialog.type !== 'individual' && dialog.users.includes(id));
+      socket.emit('dialogs', dialogsList)
+    })
+}
+
+function getMessages(id, socket){
+  Messages.find({currentDialog: id})
+    .then(result => {
+      socket.emit('messages', result)
+    })
+}
 
 io.on('connection', (socket) => {
   socket.emit('connect');
+  socket.email = currentUser.email;
+  socket.id = currentUser._id;
+  showDialogs(socket.id, socket);
 
-  socket.on('email', (email) => {
-    socket.email = email;
-    if (!emails.includes(email)) {emails.push(email);};
-    clients.forEach(client => {
-      client.emit('people-online', emails); 
+  socket.on('chat', (data) => {
+    const message = new Messages ({
+      _id: new mongoose.Types.ObjectId(),
+      ...data,
     });
-    dialogs[0].users = emails;
-    const myDialogs = dialogs.filter(dialog => dialog.users.includes(socket.email));
-    socket.emit('dialogs', myDialogs);
-    console.log('отправлено');
-  })
-
-  socket.on('chat', (message) => {
-    const {currentDialog} = message;
-
-    const current = dialogs.find(dialog => dialog.type === currentDialog);
-    
-    if (current) {
-      current.messages.push(message);
-      clients.forEach(client => {
-        if (current.users.includes(client.email)) {
-          if (blackList[socket.email] && blackList[socket.email].includes(client.email)){ return };
-          if (blackList[client.email] && blackList[client.email].includes(socket.email)){ return };
-          client.emit('chat', message);
-        }
-      })
-    } else {
-      const individual = dialogs.find(dialog => dialog.type === 'individual' && dialog.users.includes(currentDialog) && dialog.users.includes(socket.email));
-      individual.messages.push(message);
-      clients.forEach(client => {
-        if (individual.users.includes(client.email)) {
-          if (blackList[socket.email] && blackList[socket.email].includes(client.email)){ return };
-          if (blackList[client.email] && blackList[client.email].includes(socket.email)){ return };
-          client.emit('chat', message);
-        }
-      })
-    }
+    message.save()
+      .then(result =>{console.log(result)})
+      .catch(err => {console.log(err)});
+    clientsOnline.forEach(client => {
+      client.emit('chat', message);
+    })
   })
  
-  socket.on('connect-user', (user) => {
-    
-    const currentDialog = dialogs.find(dialog => dialog.type === 'individual' && dialog.users.includes(socket.email) && dialog.users.includes(user));
-
-    if (currentDialog) {
-      socket.emit('current-dialog', currentDialog);
-      socket.emit('messages', currentDialog.messages);
-      return;
-    }
-    const dialog = {
-      type: 'individual',
-      users: [socket.email, user],
-      messages: []
-    }
-    dialogs.push(dialog);
-    socket.emit('current-dialog', dialog);
-    socket.emit('messages', null);
-    const myDialogs = dialogs.filter(dialog => dialog.users.includes(socket.email));
-    socket.emit('dialogs', myDialogs);
-    const person = clients.find(client => client.email === user);
-    const personDialogs = dialogs.filter(dialog => dialog.users.includes(user));
-    person.emit('dialogs', personDialogs);
-
+  socket.on('connect-user', (id) => {
+    let dialogID;
+    Dialogs.find({type: 'individual'})
+      .then(result => {
+        const currentDialog = result.find(dialog => dialog.users.includes(socket.id) && dialog.users.includes(id));
+        if (!currentDialog){
+        const dialog = new Dialogs ({
+            _id: new mongoose.Types.ObjectId(),
+            type: 'individual',
+            users: [socket.id, id]
+          });
+          dialog.save()
+            .then(result =>{console.log(result)})
+            .catch(err => {console.log(err)});
+            dialogID = dialog._id;
+          socket.emit('current-dialog', dialog);
+        }  else {
+          dialogID = currentDialog._id;
+          socket.emit('current-dialog', currentDialog);
+        }
+        getMessages(dialogID, socket);
+        // отправляем сообщения с ID этого диалога
+      })
   })
 
   socket.on('new-group', (group) => {
-    dialogs.push(group);
-    clients.forEach(client => {
-      if (group.users.includes(client.email)){
-        const personDialogs = dialogs.filter(dialog => dialog.users.includes(client.email));
-        client.emit('dialogs', personDialogs);
-      }
-    })
+    const dialog = new Dialogs ({
+      _id: new mongoose.Types.ObjectId(),
+      ... group
+    });
+    dialog.save()
+      .then(() =>{
+        clientsOnline.forEach(client => {
+          if (group.includes(client.id)){
+            group.users.forEach(user => {
+              showDialogs(user, client);
+            })
+          }
+        })
+      })
+      .catch(err => {console.log(err)});
+    socket.emit('current-dialog', dialog);
   })
 
-  socket.on('change-dialog', dialog => {
-    const current = dialogs.find(i => i.type === dialog);
-    if (current) {
-      socket.emit('messages', current.messages);
-      socket.emit('current-dialog', current);
-      return;
-    }
-    const currentDialog = dialogs.find(i => i.type === 'individual' && i.users.includes(socket.email) && i.users.includes(dialog));
-    socket.emit('messages', currentDialog.messages);
-    socket.emit('current-dialog', currentDialog);
+  socket.on('change-dialog', id => {
+    Dialogs.find({_id: id})
+      .then(result => {
+        socket.emit('current-dialog', result[0]);
+      })
+      getMessages(id, socket);
+    //отправить сообщения
   })
 
-  socket.on('block-user', (user) => {
-    if (!blackList[socket.email]) {blackList[socket.email]=[]};
-    if (blackList[socket.email].includes(user)) return;
-    blackList[socket.email].push(user);
-    socket.emit('black-list', blackList[socket.email]);
-    socket.emit('people-online', emails);
-  })
-
-  socket.on('restore-user', (user) => {
-    const newList = blackList[socket.email].filter(i => i !== user);
-    blackList[socket.email] = newList;
-    socket.emit('black-list', blackList[socket.email]);
-    socket.emit('people-online', emails);
-  })
-
-  clients.push(socket);
+  clientsOnline.push(socket);
 
   socket.on('disconnect', () => {
     const newEmails = emails.filter(email => email !== socket.email);
-    const newClients = clients.filter(client => client.email !== socket.email);
-    clients = newClients;
+    const newClients = clientsOnline.filter(client => client.email !== socket.email);
+    clientsOnline = newClients;
     emails = newEmails;
-    clients.forEach(client => {
-      client.emit('people-online', emails); 
-    })
-    dialogs[0].users = emails;
-    console.log('off');
+    // console.log('off');
   })
   
-  console.log('done');
-  console.log(clients.length);
+  // console.log('done');
+  // console.log(clientsOnline.length);
 })
