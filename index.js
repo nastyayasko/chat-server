@@ -18,7 +18,6 @@ let clientsOnline = [];
 function showDialogs(id, socket){
   Dialogs.find({type:'group'})
     .then(result => {
-      console.log('result', result);
       const dialogsList = result.filter(dialog => dialog.users.includes(id));
       socket.emit('dialogs', dialogsList)
     })
