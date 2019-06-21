@@ -8,6 +8,7 @@ const dialogsSchema = mongoose.Schema({
     default:'',
   },
   users: Array,
+  img: String,
 });
 
 module.exports = mongoose.model('Dialogs', dialogsSchema);

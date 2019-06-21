@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const app = require('./src/app');
 const Dialogs = require('./src/mongoose/dialogs');
 const Messages = require('./src/mongoose/messages');
+const Users = require('./src/mongoose/users');
 
 mongoose.connect('mongodb://localhost/chat', {useNewUrlParser: true})
 
@@ -32,15 +33,27 @@ function getMessages(id, socket){
     .catch(err => {console.log(err)});
 }
 
+function showAllUsers(){
+  Users.find()
+    .then(res => {
+      console.log(res);
+      clientsOnline.forEach(client => {
+        client.emit('all-users', res);
+      })
+    })
+    .catch(err => {console.log(err)});
+}
+
 io.on('connection', (socket) => {
   socket.emit('connect');
   socket.on('user', user => {
     socket.email = user.email;
     socket._id = user._id;
-   showDialogs(socket._id, socket);
+    showDialogs(socket._id, socket);
+    showAllUsers()
   })
   
-  
+
 
   socket.on('chat', (data) => {
     const message = new Messages ({
@@ -106,7 +119,6 @@ io.on('connection', (socket) => {
   })
 
   clientsOnline.push(socket);
-
   socket.on('disconnect', () => {
     const newClients = clientsOnline.filter(client => client.id !== socket.id);
     clientsOnline = newClients;
