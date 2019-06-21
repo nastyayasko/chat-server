@@ -33,16 +33,7 @@ function getMessages(id, socket){
     .catch(err => {console.log(err)});
 }
 
-function showAllUsers(){
-  Users.find()
-    .then(res => {
-      console.log(res);
-      clientsOnline.forEach(client => {
-        client.emit('all-users', res);
-      })
-    })
-    .catch(err => {console.log(err)});
-}
+
 
 io.on('connection', (socket) => {
   socket.emit('connect');
@@ -50,7 +41,6 @@ io.on('connection', (socket) => {
     socket.email = user.email;
     socket._id = user._id;
     showDialogs(socket._id, socket);
-    showAllUsers()
   })
   
 
@@ -65,6 +55,7 @@ io.on('connection', (socket) => {
       .catch(err => {console.log(err)});
     clientsOnline.forEach(client => {
       client.emit('chat', message);
+      client.emit('all-users');
     })
   })
  
@@ -119,6 +110,7 @@ io.on('connection', (socket) => {
   })
 
   clientsOnline.push(socket);
+
   socket.on('disconnect', () => {
     const newClients = clientsOnline.filter(client => client.id !== socket.id);
     clientsOnline = newClients;
