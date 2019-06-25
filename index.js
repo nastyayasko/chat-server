@@ -4,7 +4,6 @@ const mongoose = require('mongoose');
 const app = require('./src/app');
 const Dialogs = require('./src/mongoose/dialogs');
 const Messages = require('./src/mongoose/messages');
-const Users = require('./src/mongoose/users');
 
 mongoose.connect('mongodb://localhost/chat', {useNewUrlParser: true})
 
@@ -16,15 +15,6 @@ const io = socket(server);
 
 let clientsOnline = [];
 
-function showDialogs(id, socket){
-  Dialogs.find({type:'group'})
-    .then(result => {
-      const dialogsList = result.filter(dialog => dialog.users.includes(id));
-      socket.emit('dialogs', dialogsList)
-    })
-    .catch(err => {console.log(err)});
-}
-
 function getMessages(id, socket){
   Messages.find({currentDialog: id})
     .then(result => {
@@ -33,18 +23,13 @@ function getMessages(id, socket){
     .catch(err => {console.log(err)});
 }
 
-
-
 io.on('connection', (socket) => {
   socket.emit('connect');
   socket.on('user', user => {
     socket.email = user.email;
     socket._id = user._id;
-    showDialogs(socket._id, socket);
   })
   
-
-
   socket.on('chat', (data) => {
     const message = new Messages ({
       _id: new mongoose.Types.ObjectId(),
@@ -92,7 +77,7 @@ io.on('connection', (socket) => {
       .then(() =>{
         clientsOnline.forEach(client => {
           if (group.users.includes(client._id)){
-            showDialogs(client._id, client);
+            client.emit('dialogs');
           }
         })
         socket.emit('current-dialog', dialog);

@@ -34,6 +34,18 @@ app.get('/api/dialogs', function(req, res){
   })
 })
 
+app.get('/api/dialogs/:id', function(req, res){
+  const {id} = req.params;
+  Dialogs.find({type:'group'})
+  .then(result => {
+    const dialogs = result.filter(dialog => dialog.users.includes(id));
+    res.status(200).send(dialogs);
+  })
+  .catch(err => {
+    res.status(404).send(err);
+  })
+})
+
 app.get('/api/messages', function(req, res){
   Messages.find()
   .then(messages => {
