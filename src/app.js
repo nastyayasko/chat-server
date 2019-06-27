@@ -111,7 +111,7 @@ app.post('/api/sign-up', function (req, res){
   Users.find({email: data.email})
     .then(result => {
       if (result.length > 0){
-        res.status(200).send({client: true});
+        res.status(200).send({status: 'User with this email already exists.'});
       } else {
         const user = new Users ({
           ... data,
@@ -134,7 +134,7 @@ app.post('/api/log-in', function (req, res){
       if (result.length > 0) {
         res.status(200).send( result[0] );
       } else {
-        res.status(200).send( {new: true} );
+        res.status(200).send( {status: 'Invalid email or password.'} );
       }
     })
     .catch(err => {
