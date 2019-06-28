@@ -36,7 +36,7 @@ app.get('/api/dialogs', function(req, res){
 
 app.get('/api/dialogs/:id', function(req, res){
   const {id} = req.params;
-  Dialogs.find({type:'group'})
+  Dialogs.find()
   .then(result => {
     const dialogs = result.filter(dialog => dialog.users.includes(id));
     res.status(200).send(dialogs);
@@ -54,6 +54,17 @@ app.get('/api/messages', function(req, res){
   .catch(err => {
     res.status(404).send(err);
   })
+})
+
+app.get('/api/messages/:id', function(req, res){
+  const {id} = req.params;
+  Messages.find({currentDialog: id})
+    .then(messages => {
+      res.status(200).send(messages);
+    })
+    .catch(err => {
+    res.status(404).send(err);
+    })
 })
 
 app.get('/api/all-users', function(req, res){

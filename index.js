@@ -24,6 +24,7 @@ function getMessages(id, socket){
 }
 
 io.on('connection', (socket) => {
+  console.log('new connection');
   socket.emit('connect');
   socket.on('user', user => {
     socket.email = user.email;
