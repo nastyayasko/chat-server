@@ -153,4 +153,17 @@ app.post('/api/log-in', function (req, res){
     });
 });
 
+app.post('/api/dialogs', function(req, res){
+  const data = req.body;
+  const dialog = new Dialogs ({
+    _id: new mongoose.Types.ObjectId(),
+    ...data
+  });
+  dialog.save()
+    .then(() =>{
+      res.status(200).send(dialog);
+    })
+    .catch(err => {console.log(err)});
+  })
+
 module.exports = app;
