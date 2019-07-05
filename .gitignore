@@ -1,3 +1,4 @@
 node_modules
 socket-net
 socket-ws
+.env

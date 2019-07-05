@@ -1,3 +1,4 @@
+require('dotenv').config();
 const socket = require('socket.io');
 const mongoose = require('mongoose');
 

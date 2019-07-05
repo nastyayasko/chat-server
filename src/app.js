@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const mongoose = require('mongoose');
+var jwt = require('jwt-simple');
 
 const Users = require('./mongoose/users');
 const Dialogs = require('./mongoose/dialogs');
