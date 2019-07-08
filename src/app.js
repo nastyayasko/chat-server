@@ -88,10 +88,11 @@ app.get('/api/all-users', function(req, res){
 
 app.post('/api/auth', function(req, res){
   const data = req.body;
+  const token = jwt.encode(data, process.env.SECRET_KEY);
   Users.find({email: data.email})
     .then(result => {
       if (result.length > 0){
-        Users.updateOne({email: data.email}, data)
+        Users.updateOne({email: data.email}, {...data, token})
           .then(() => {
             Users.find({email: data.email})
             .then(result => {
@@ -104,10 +105,11 @@ app.post('/api/auth', function(req, res){
       } else {
         const user = new Users ({
               ... data,
+              token,
               _id: new mongoose.Types.ObjectId()
             });
         user.save()
-          .then(res => {
+          .then(result => {
             res.status(200).send(user);
           })
           .catch(err => {console.log('save:', err)});
@@ -120,6 +122,7 @@ app.post('/api/auth', function(req, res){
 
 app.post('/api/sign-up', function (req, res){
   const data = req.body;
+  const token = jwt.encode(data, process.env.SECRET_KEY);
   Users.find({email: data.email})
     .then(result => {
       if (result.length > 0){
@@ -127,6 +130,7 @@ app.post('/api/sign-up', function (req, res){
       } else {
         const user = new Users ({
           ... data,
+          token,
           _id: new mongoose.Types.ObjectId()
         });
         user.save()
@@ -147,6 +151,21 @@ app.post('/api/log-in', function (req, res){
         res.status(200).send( result[0] );
       } else {
         res.status(200).send( {status: 'Invalid email or password.'} );
+      }
+    })
+    .catch(err => {
+      console.log('login:', err);
+    });
+});
+
+app.get('/api/log-in/:token', function (req, res){
+  const {token} = req.params;
+  Users.find({token})
+    .then(result => {
+      if (result.length > 0) {
+        res.status(200).send( result[0] );
+      } else {
+        console.log('Not found');
       }
     })
     .catch(err => {
