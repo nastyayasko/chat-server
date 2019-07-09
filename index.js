@@ -6,7 +6,7 @@ const app = require('./src/app');
 const Dialogs = require('./src/mongoose/dialogs');
 const Messages = require('./src/mongoose/messages');
 
-mongoose.connect('mongodb://localhost/chat', {useNewUrlParser: true})
+mongoose.connect('mongodb+srv://chat-app:chat-app@chat-app-qtxta.mongodb.net/test?retryWrites=true&w=majority', {useNewUrlParser: true})
 
 const server = app.listen(3020, () => {
     console.log('listening on port 3020');
