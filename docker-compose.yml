@@ -1,17 +1,15 @@
-version: '3'
+version: "2"
 services:
-  web:
-    image: docker-chat-server
-    build: ./
-    command: npm start
+  app:
+    container_name: chat-server
+    restart: always
+    build: .
     ports:
       - "3020:3020"
-    volumes:
-      - ./:/app
-      - /app/node_modules
-    depends_on:
-      - "mongo"
+    links:
+      - mongo
   mongo:
-    image: "mongo"
+    container_name: mongo
+    image: mongo
     ports:
       - "27017:27017"

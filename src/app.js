@@ -15,6 +15,13 @@ app.use( bodyParser.urlencoded({extended:true}) );
 app.use(express.static('public'));
 app.use( cors() );
 
+
+app.get('/', function(req, res){
+  res.status(200).send('Welcome!');
+  
+})
+
+
 app.get('/api/users', function(req, res){
   Users.find()
   .then(users => {
