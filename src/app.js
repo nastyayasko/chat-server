@@ -3,17 +3,21 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const mongoose = require('mongoose');
 var jwt = require('jwt-simple');
+const fileUpload = require('express-fileupload');
 
 const Users = require('./mongoose/users');
 const Dialogs = require('./mongoose/dialogs');
 const Messages = require('./mongoose/messages');
 
 const app = express();
+const userPic = 'https://www.achievesuccesstutoring.com/wp-content/uploads/2019/05/no-photo-icon-22.jpg.png';
+const groupPic = 'https://www.applozic.com/resources/lib/advanced/css/app/images/mck-icon-group.png';
 
 app.use( bodyParser.json() );
 app.use( bodyParser.urlencoded({extended:true}) );
 app.use(express.static('public'));
 app.use( cors() );
+app.use( fileUpload() );
 
 
 app.get('/', function(req, res){
@@ -135,16 +139,40 @@ app.post('/api/sign-up', function (req, res){
       if (result.length > 0){
         res.status(200).send({status: 'User with this email already exists.'});
       } else {
-        const user = new Users ({
-          ... data,
-          token,
-          _id: new mongoose.Types.ObjectId()
-        });
-        user.save()
-          .then(() =>{
-            res.status(200).send( user );
-          })
-          .catch(err => {console.log(err)});
+        if (!req.files) {
+          const user = new Users ({
+              ... data,
+              token,
+              img: userPic,
+              _id: new mongoose.Types.ObjectId()
+            });
+            user.save()
+              .then(() =>{
+                res.status(200).send( user );
+              })
+              .catch(err => {console.log(err)});
+        } else {
+          req.files.file.mv(
+            `./public/images/${req.files.file.name}`,
+            function (err) {
+              if (err) {
+                console.log(err);
+                return;
+              }
+              const user = new Users ({
+                ... data,
+                token,
+                img: `http://localhost:3020/images/${req.files.file.name}`,
+                _id: new mongoose.Types.ObjectId()
+              });
+              user.save()
+                .then(() =>{
+                  res.status(200).send( user );
+                })
+                .catch(err => {console.log(err)});
+            }
+          )
+        }
       }
     })
     .catch(err => {console.log(err)});
@@ -184,7 +212,8 @@ app.post('/api/dialogs', function(req, res){
   const data = req.body;
   const dialog = new Dialogs ({
     _id: new mongoose.Types.ObjectId(),
-    ...data
+    ...data,
+    img: data.img ? data.img : groupPic,
   });
   dialog.save()
     .then(() =>{
