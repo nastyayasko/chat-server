@@ -162,7 +162,7 @@ app.post('/api/sign-up', function (req, res){
               const user = new Users ({
                 ... data,
                 token,
-                img: `http://localhost:3020/images/${req.files.file.name}`,
+                img: `http://shielded-lake-66352.herokuapp.com/images/${req.files.file.name}`,
                 _id: new mongoose.Types.ObjectId()
               });
               user.save()
