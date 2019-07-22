@@ -213,7 +213,7 @@ app.post('/api/dialogs', function(req, res){
   const dialog = new Dialogs ({
     _id: new mongoose.Types.ObjectId(),
     ...data,
-    img: data.img ? data.img : groupPic,
+    img: groupPic,
   });
   dialog.save()
     .then(() =>{
