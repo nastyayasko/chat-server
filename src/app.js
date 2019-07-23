@@ -212,8 +212,8 @@ app.post('/api/dialogs', function(req, res){
   const data = req.body;
   const dialog = new Dialogs ({
     _id: new mongoose.Types.ObjectId(),
-    ...data,
     img: groupPic,
+    ...data,
   });
   dialog.save()
     .then(() =>{
