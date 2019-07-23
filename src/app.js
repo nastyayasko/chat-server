@@ -133,9 +133,9 @@ app.post('/api/auth', function(req, res){
 
 app.post('/api/sign-up', function (req, res){
   const data = req.body;
-  const token = jwt.encode(data, process.env.SECRET_KEY);
+  // const token = jwt.encode(data, process.env.SECRET_KEY);
   console.log(data);
-  console.log(token);
+  // console.log(token);
 
   // Users.find({email: data.email})
   //   .then(result => {
