@@ -213,10 +213,9 @@ app.post('/api/dialogs', function(req, res){
   const data = req.body;
   const dialog = new Dialogs ({
     _id: new mongoose.Types.ObjectId(),
-    img: 'https://www.applozic.com/resources/lib/advanced/css/app/images/mck-icon-group.png',
+    img: groupPic,
     ...data,
   });
-  console.log(dialog);
   dialog.save()
     .then(() =>{
       res.status(200).send(dialog);

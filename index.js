@@ -73,7 +73,8 @@ io.on('connection', (socket) => {
   socket.on('new-group', (group) => {
     const dialog = new Dialogs ({
       _id: new mongoose.Types.ObjectId(),
-      ...group
+      ...group,
+      img: 'https://www.applozic.com/resources/lib/advanced/css/app/images/mck-icon-group.png'
     });
     dialog.save()
       .then(() =>{
