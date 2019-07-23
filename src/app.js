@@ -133,52 +133,50 @@ app.post('/api/auth', function(req, res){
 
 app.post('/api/sign-up', function (req, res){
   const data = req.body;
-  // const token = jwt.encode(data, process.env.SECRET_KEY);
-  console.log(data);
-  // console.log(token);
-
-  // Users.find({email: data.email})
-  //   .then(result => {
-  //     if (result.length > 0){
-  //       res.status(200).send({status: 'User with this email already exists.'});
-  //     } else {
-  //       if (!req.files) {
-  //         const user = new Users ({
-  //             ... data,
-  //             token,
-  //             img: userPic,
-  //             _id: new mongoose.Types.ObjectId()
-  //           });
-  //           user.save()
-  //             .then(() =>{
-  //               res.status(200).send( user );
-  //             })
-  //             .catch(err => {console.log(err)});
-  //       } else {
-  //         req.files.file.mv(
-  //           `./public/images/${req.files.file.name}`,
-  //           function (err) {
-  //             if (err) {
-  //               console.log(err);
-  //               return;
-  //             }
-  //             const user = new Users ({
-  //               ... data,
-  //               token,
-  //               img: `http://shielded-lake-66352.herokuapp.com/images/${req.files.file.name}`,
-  //               _id: new mongoose.Types.ObjectId()
-  //             });
-  //             user.save()
-  //               .then(() =>{
-  //                 res.status(200).send( user );
-  //               })
-  //               .catch(err => {console.log(err)});
-  //           }
-  //         )
-  //       }
-  //     }
-  //   })
-  //   .catch(err => {console.log(err)});
+  const token = jwt.encode(data, 'JavaScript');
+  
+  Users.find({email: data.email})
+    .then(result => {
+      if (result.length > 0){
+        res.status(200).send({status: 'User with this email already exists.'});
+      } else {
+        if (!req.files) {
+          const user = new Users ({
+              ... data,
+              token,
+              img: userPic,
+              _id: new mongoose.Types.ObjectId()
+            });
+            user.save()
+              .then(() =>{
+                res.status(200).send( user );
+              })
+              .catch(err => {console.log(err)});
+        } else {
+          req.files.file.mv(
+            `./public/images/${req.files.file.name}`,
+            function (err) {
+              if (err) {
+                console.log(err);
+                return;
+              }
+              const user = new Users ({
+                ... data,
+                token,
+                img: `http://shielded-lake-66352.herokuapp.com/images/${req.files.file.name}`,
+                _id: new mongoose.Types.ObjectId()
+              });
+              user.save()
+                .then(() =>{
+                  res.status(200).send( user );
+                })
+                .catch(err => {console.log(err)});
+            }
+          )
+        }
+      }
+    })
+    .catch(err => {console.log(err)});
 });
 
 app.post('/api/log-in', function (req, res){
