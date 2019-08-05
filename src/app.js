@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const mongoose = require('mongoose');
-var jwt = require('jwt-simple');
+const jwt = require('jwt-simple');
 const fileUpload = require('express-fileupload');
 
 const Users = require('./mongoose/users');
